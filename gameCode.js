@@ -1,10 +1,14 @@
 
+
+
+
+
 		(function ()
 		{
 			var requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
 			window.requestAnimationFrame = requestAnimationFrame;
 		})();
-var totalNumBlocks = 60, canHover = true;
+var totalNumBlocks = 80, canHover = true;
 var isDead = false, wonGame = false, canShootHook = true;
 var globalC = 0;	//BECAUSE HOOK OCCURS TOO RAPIDLY
 
@@ -35,7 +39,7 @@ var canvas = document.getElementById("canvas"),
 
 var boxes = [];
 
-var hook = {x:0,  y:0}, fired, madeContact;
+var hook = {x:0,  y:0}, fired, madeContact = false;
 
 //ai
 aiR = false, aiL = false, aiJ = false, aiDJ = false, aiH = false;
@@ -52,7 +56,8 @@ boxes.push({
   x: width-30,
   y: height/2,
   width: 30,
-  height: 20
+  height: 20,
+	color: 0
 });
 ctx.save();
 ctx.clearRect(width-20, height-2, 20, 20);
@@ -65,14 +70,16 @@ ctx.restore();
 		x: 0,
 		y: 0,
 		width: 10,
-		height: height
+		height: height,
+		color: 0
 	});
 //bottom
 	boxes.push({
 		x: 0,
 		y: height - 2,
 		width: (width/15),
-		height: 50
+		height: 50,
+		color: 0
 	});
 
 
@@ -81,7 +88,8 @@ ctx.restore();
 		x: width - 10,
 		y: 0,
 		width: 50,
-		height: height/2
+		height: height/2,
+		color: 0
 	});
 
 
@@ -187,7 +195,8 @@ if(my_param > 0)
       x: num_w,
       y: num_h,
       width: 30,
-      height: 10
+      height: 10,
+			color: 0
     });
 
     //console.log(boxes[i]["x"]);
@@ -435,6 +444,26 @@ function scrollTerrain()
     ctx.fillStyle="black";
     ctx.fill();
 
+		for(var i = 0; i < boxes.length; i++)
+		{
+			if(boxes[i].color == 1)
+			{
+				ctx.fillStyle = "blue";
+				ctx.fillRect(boxes[i].x, boxes[i].y, boxes[i].width, boxes[i].height);
+				break;
+			}
+			else if(boxes[i].color == 2)
+			{
+				ctx.fillStyle = "yellow";
+				ctx.fillRect(boxes[i].x, boxes[i].y, boxes[i].width, boxes[i].height);
+				break;
+			}
+			else {
+				//nothing
+			}
+
+		}
+
     ctx.restore();
 
 	ctx.save(); //added
@@ -450,13 +479,92 @@ function scrollTerrain()
 
 
 
-	//end add Player
+
+
+	//added: Check if falling (maybe put in AI button method)
+
+	if(player.grounded)
+	{
+		var theBoxes = getAndSortBoxes(player.x, player.y);
+
+
+		jumpToBox(theBoxes[0].x, theBoxes[0].y, player.x, player.y);
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+		var sortedBoxes = fallingGetClosestBox();
+
+
+		//they are sorted by x distance, so try to move to the first box
+		var diffX = player.x-sortedBoxes[0].x;
+		var diffY = sortedBoxes[0].y-player.y;
+		var hyp = Math.sqrt(Math.pow(diffX,2) + Math.pow(diffY, 2));
+
+
+			if(diffX > 0 && diffX < 100)	//box is to left of player
+			{
+				moveRightAI(diffX);
+				console.log("MOVING LEEEEEFT" ,hyp);
+			}
+			else if(diffX < 0 && diffX > (-100))	//box is to right of player
+			{
+				moveRightAI(diffX-3);
+				console.log("MOVING RIGHT" ,hyp);
+
+			}
+			else {
+				console.log("equal");
+			}
+
+*/
+	}//if player is falling
+
 
 
 
     requestAnimationFrame(scrollTerrain);
 
 }//end scrollTerrain
+
+function fallingGetClosestBox()
+{
+
+	var sortedCopy = [];
+
+	for(var i = 4; i < boxes.length; i++)
+	{
+		if(player.y < (boxes[i].y))
+		{
+			sortedCopy.push(boxes[i]);
+
+		}
+	}
+
+	if(sortedCopy.length <= 0)
+	{
+		sortedCopy.push(boxes[3]);
+	}
+
+		sortedCopy.sort(function(a, b){
+	 		return a.x-b.x;
+ })
+
+
+
+	return sortedCopy;
+
+}//end getAllBoxes
 
 function colCheck(shapeA, shapeB)
 {
@@ -565,7 +673,7 @@ player.velY +=0.1;
         	player.velX += 0.5;
 				}
 				else {
-					console.log(player.velX);
+					//console.log(player.velX);
 				}
 
 
@@ -660,7 +768,7 @@ function shootHook()
             break; //out of for loop
           }
           else {
-            console.log("right angle, too far away!!!");
+            //console.log("right angle, too far away!!!");
           }
 
         }
@@ -751,6 +859,9 @@ window.addEventListener("keydown", function(e) {
 
 }, false);
 
+
+
+
 function spamButtons()
 {
 	//spam the grappling hook AND move right:
@@ -762,21 +873,33 @@ function spamButtons()
 function playWithAI()
 {
 //BACKUP PLAN
+var counter = 0;
+var getPX = -1, getPY = -1, sortedC;
 
-	do
-	{
-		console.log("button: ",player.x);
-		var getPX = player.x;
-		var getPY = player.y;
-		var closestBox = getAndSortBoxes(getPX, getPY);
+		//console.log("button: ",player.x);
+		getPX = player.x;
+		getPY = player.y;
+		sortedC = getAndSortBoxes(player.x, player.y);
 		//console.log(closestBox);
-		jumpToBox(closestBox.x, closestBox.y, getPX, getPY);
+		//console.log("Jumping about ",sortedC[0].x) - player.x;
+		jumpToBox(sortedC[0].x, sortedC[0].y, player.x, player.y);
+
+
+
+
+		//testing:
+
+
+
+
+
+		//end testing
 
 
 
 			//playWithAI();
 
-	}while(isDead);
+
 
 
 //better plan:
@@ -811,16 +934,26 @@ function jumpAI()
 
 function moveRightAI(distX)
 {
-	var numMS = distX/0.1193;
+	if(distX < 0)//left
+	{
+		var numMS = (distX * -1)/0.1193;
+		var initX = player.x;
+		var initY = player.y;
 
+		keys[65] = true;
+		setTimeout(function(){keys[65] = false; /*console.log("final player.x: ",player.x); console.log("final player.y: ", player.y);*/}, numMS);
 
-	var initX = player.x;
-	var initY = player.y;
+	}
+	else if(distX >0)//rgiht
+	{
+		var numMS = distX/0.1193;
+		var initX = player.x;
+		var initY = player.y;
 
-	keys[68] = true;
-	setTimeout(function(){keys[68] = false; console.log("final player.x: ",player.x); console.log("final player.y: ", player.y);}, numMS);
+		keys[68] = true;
+		setTimeout(function(){keys[68] = false; /*console.log("final player.x: ",player.x); console.log("final player.y: ", player.y);*/}, numMS);
 
-
+	}
 
 }
 
@@ -829,9 +962,24 @@ function useGrappleHookAI()
 	keys[72] = true;
 	keys[68] = true;
 
-	setTimeout(function(){keys[72] = false;}, 500);
+	setTimeout(function(){keys[72] = false;}, 250);
 
-	setTimeout(function(){keys[68] = false;}, 500);
+
+	setTimeout(function(){keys[68] = false;}, 750);
+
+
+
+}
+
+function useGrappleHookAILong()
+{
+	keys[72] = true;
+	keys[68] = true;
+
+	setTimeout(function(){keys[72] = false;}, 400);
+
+
+	setTimeout(function(){keys[68] = false;}, 1200);
 
 }
 
@@ -843,8 +991,8 @@ function getAndSortBoxes(playerX, playerY)
 	//IGNORE FIRST 4
 	for(var ii = 4; ii < boxes.length; ii++)
 	{
-		//MAKE SURE IT'S EITHER BELOW OR WITHIN 65(90 DEGREE JUMP)
-		if(((boxes[ii].x - 5) > playerX) && (playerY - boxes[ii].y < 65))
+		//MAKE SURE IT'S EITHER BELOW OR WITHIN 70(90 DEGREE JUMP)
+		if(((boxes[ii].x - 3) > playerX) && (playerY - boxes[ii].y < 70))
 		{
 			boxesCopy.push(boxes[ii]);
 		}
@@ -853,7 +1001,7 @@ function getAndSortBoxes(playerX, playerY)
 
 	//NOW SORT
 	/*==================================*/
-	var sortedCopy = [];
+	var sortedCopy = boxesCopy;
 	var closestBox = boxesCopy[0];
 
 	closestBox = boxesCopy[0];
@@ -863,14 +1011,41 @@ function getAndSortBoxes(playerX, playerY)
 		if(boxesCopy[xx].x < closestBox.x)
 		{
 			closestBox = boxesCopy[xx];
+
+
 		}
 	}
 
-	//now we have the closestBox
-	return closestBox;
+//fill the closest Box with blue!
+	for(var z = 0; z < boxes.length; z++)
+	{
+		if((closestBox.x == boxes[z].x) && (closestBox.y == boxes[z].y))
+		{
+			boxes[z].color = 1;
+			//console.log("FOUND THE CLOSEST BOX!!!");
+			break;
+		}
 
 
-}//end getAllBoxes
+	}
+
+
+	//now we have the closestBox (closestBox)
+
+	//sort the sortedCopy by
+		//1. SMALLEST Y (we want to stay near the top)
+		//2. SMALLEST X
+
+		sortedCopy.sort(function(a, b){
+	 //return (a.x-a.y)-(b.x-b.y);
+	 return (a.x)-(b.x);
+ });
+
+
+
+	return sortedCopy;
+
+}//end getAndSortBoxes
 
 function jumpToBox(destX, destY, originX, originY)
 {
@@ -884,18 +1059,20 @@ function jumpToBox(destX, destY, originX, originY)
 	if(destY-originY < 0)
 	{
 		//ABOVE
-		//console.log("ABOVE...deg:",angleDeg);
+		console.log("ABOVE...deg:",angleDeg);
 		//console.log("deltaX",deltaX);
 		if(angleDeg > 60)
 		{
 			jumpAI();
 			moveRightAI(22);
+			console.log("close");
 
 		}
 		else if(angleDeg >30)
 		{
 			jumpAI();
 			moveRightAI(45);
+			console.log("kindof close");
 
 		}
 		else if(angleDeg >20)
@@ -905,25 +1082,19 @@ function jumpToBox(destX, destY, originX, originY)
 			moveRightAI(90);
 			//added
 			useGrappleHookAI();
+			console.log("pretty far");
 
 		}
 		else
 		{
+			console.log("VERY FAR");
 			//console.log("hypot",hypot);
-			if(hypot <= 250)
-			{
 			//USE GRAPPLING HOOK!!!
 				//console.log("GRAPPLE TIME!");
 				jumpAI();
-				useGrappleHookAI();
-			}
-			else
-			{
-					jumpAI();
-					moveRightAI(90);
-					useGrappleHookAI();
+				jumpAI();
 
-			}
+				useGrappleHookAILong();
 
 		}
 
@@ -960,7 +1131,8 @@ function AIObstacleCourse()
       x: num_w,
       y: num_h,
       width: 30,
-      height: 10
+      height: 10,
+			color: 0
     });
 
     //console.log(boxes[i]["x"]);
